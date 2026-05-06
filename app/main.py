@@ -572,6 +572,55 @@ async def mcp_tools_schema():
 MCP_REGISTRY_AUTH_CONTENT = "v=MCPv1; k=ed25519; p=h7SEyb+uUyDnAuhTuNfFKVLgvbKI+4eIJQQCfXiccxs="
 
 
+API_CATALOG_CONTENT = {
+    "api": "BuyWhere Product Catalog API",
+    "version": "v1",
+    "description": "Agent-native product catalog API for AI agent commerce. Indexes 5M+ products from 40+ retailers across Southeast Asia, US, Australia, Japan, and Korea.",
+    "baseUrl": "https://api.buywhere.ai",
+    "auth": {
+        "type": "Bearer",
+        "keyPrefixes": {
+            "bw_free_": {"rateLimit": "60 req/min", "tier": "free"},
+            "bw_live_": {"rateLimit": "600 req/min", "tier": "production"},
+            "bw_partner_": {"rateLimit": "unlimited", "tier": "partner"},
+        },
+        "signUpUrl": "https://buywhere.ai/api-keys",
+    },
+    "endpoints": {
+        "rest": {
+            "base": "https://api.buywhere.ai/v1",
+            "openApiSpec": "https://api.buywhere.ai/openapi.json",
+        },
+        "mcp": {
+            "url": "https://api.buywhere.ai/mcp",
+            "protocol": "MCP",
+            "transport": "HTTP",
+            "guide": "https://buywhere.ai/docs/guides/mcp",
+        },
+        "graphql": {
+            "url": "https://api.buywhere.ai/api/graphql",
+        },
+    },
+    "docs": {
+        "apiDocs": "https://api.buywhere.ai/docs",
+        "llmsTxt": "https://api.buywhere.ai/llms.txt",
+        "aiTxt": "https://api.buywhere.ai/ai.txt",
+    },
+    "status": {
+        "health": "https://api.buywhere.ai/health",
+        "dashboard": "https://api.buywhere.ai/dashboard",
+    },
+}
+
+
+@app.get("/.well-known/api-catalog", include_in_schema=False, summary="AI agent catalog discovery endpoint")
+async def api_catalog():
+    return JSONResponse(
+        content=API_CATALOG_CONTENT,
+        headers={"Cache-Control": "public, max-age=3600, s-maxage=86400"},
+    )
+
+
 @app.get("/.well-known/mcp-registry-auth", include_in_schema=False, summary="MCP registry auth proof")
 async def mcp_registry_auth():
     from starlette.responses import Response
