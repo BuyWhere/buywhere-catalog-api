@@ -1,6 +1,7 @@
 import json
 from typing import Any, Optional
 from redis.asyncio import Redis
+from redis.asyncio.connection import ConnectionPool
 from app.config import get_settings
 
 settings = get_settings()
@@ -8,24 +9,35 @@ settings = get_settings()
 TTL_STATS = 600
 
 _redis: Optional[Redis] = None
+_redis_pool: Optional[ConnectionPool] = None
 
 
 async def get_redis() -> Redis:
-    global _redis
+    global _redis, _redis_pool
     if _redis is None:
-        _redis = Redis.from_url(
+        _redis_pool = ConnectionPool.from_url(
             settings.redis_url,
-            encoding="utf-8",
+            max_connections=20,
+            socket_keepalive=True,
+            socket_keepalive_options={
+                1: 60,
+                2: 10,
+                3: 5,
+            },
             decode_responses=True,
         )
+        _redis = Redis(connection_pool=_redis_pool)
     return _redis
 
 
 async def close_redis() -> None:
-    global _redis
+    global _redis, _redis_pool
     if _redis is not None:
         await _redis.close()
         _redis = None
+    if _redis_pool is not None:
+        await _redis_pool.disconnect()
+        _redis_pool = None
 
 
 async def cache_get(key: str) -> Optional[Any]:

@@ -148,17 +148,26 @@ class RedisPerMinuteRateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
         self._redis = None
+        self._redis_pool = None
 
     async def _get_redis(self):
         if self._redis is None:
             from redis.asyncio import Redis
+            from redis.asyncio.connection import ConnectionPool
             from app.config import build_redis_url
             full_url = build_redis_url(settings.redis_url, settings.redis_password)
-            self._redis = Redis.from_url(
+            self._redis_pool = ConnectionPool.from_url(
                 full_url,
-                encoding="utf-8",
+                max_connections=20,
+                socket_keepalive=True,
+                socket_keepalive_options={
+                    1: 60,
+                    2: 10,
+                    3: 5,
+                },
                 decode_responses=True,
             )
+            self._redis = Redis(connection_pool=self._redis_pool)
         return self._redis
 
     async def dispatch(self, request: Request, call_next):
